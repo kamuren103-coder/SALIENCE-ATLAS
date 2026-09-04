@@ -1,0 +1,725 @@
+// Logistics Intelligence Domain Schema
+// Phase 01: Ontology - Core entities for KETRACO logistics operations
+// Generated: Phase 01 Implementation
+// Status: IN_PROGRESS
+
+// Core Domain Entities (39 entities total)
+
+model LogisticsFacility {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  name                  String
+  facilityType          String    // DEPOT, WAREHOUSE, DISTRIBUTION_CENTER, TERMINAL, HUB
+  externalId            String    @unique
+  status                String    @default("ACTIVE") // ACTIVE, INACTIVE, MAINTENANCE, DECOMMISSIONED
+  
+  // Geographic positioning
+  latitude              Float
+  longitude             Float
+  address               String
+  region                String
+  country               String
+  
+  // Operational capacity
+  totalCapacityM3       Float     // cubic meters
+  availableCapacityM3   Float
+  totalCapacityUnits    Int
+  availableCapacityUnits Int
+  
+  // Infrastructure metadata
+  openingDate           DateTime
+  closingDate           DateTime?
+  operatingHours        Json      // {monday: {open: "06:00", close: "22:00"}, ...}
+  
+  // Connectivity & systems
+  hasRFID               Boolean   @default(false)
+  hasBarcode            Boolean   @default(false)
+  hasTemperatureControl Boolean   @default(false)
+  connectedToERP        Boolean   @default(false)
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  stocks                LogisticsStock[]
+  movementLegs          LogisticsMovementLeg[]
+  constraints           LogisticsConstraint[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([facilityType])
+  @@index([status])
+}
+
+model LogisticsVehicle {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  name                  String
+  vehicleType           String    // TRUCK, VAN, MOTORCYCLE, RAIL_CAR, BARGE, CONTAINER
+  externalId            String    @unique
+  status                String    @default("AVAILABLE") // AVAILABLE, IN_TRANSIT, LOADING, UNLOADING, MAINTENANCE, OUT_OF_SERVICE
+  
+  // Vehicle specifications
+  licensePlate          String    @unique
+  registrationNumber    String
+  make                  String
+  model                 String
+  year                  Int
+  
+  // Capacity specifications
+  loadCapacityKg        Float
+  volumeCapacityM3      Float
+  palletCapacity        Int
+  currentLoadKg         Float?
+  currentLoadM3         Float?
+  currentLoadUnits      Int?
+  
+  // Operational characteristics
+  fuelType              String    // DIESEL, PETROL, LPG, ELECTRIC, HYBRID
+  averageFuelConsumption Float    // km per liter or equivalent
+  refrigerated          Boolean   @default(false)
+  hazmatCertified       Boolean   @default(false)
+  
+  // Location & status
+  currentLatitude       Float?
+  currentLongitude      Float?
+  currentFacilityId     String?
+  lastKnownLocation     String?
+  lastLocationUpdate    DateTime?
+  
+  // Telematics
+  hasGPS                Boolean   @default(true)
+  hasTelemetry          Boolean   @default(false)
+  telemetryLastUpdate   DateTime?
+  
+  // Driver assignment
+  assignedDriverId      String?
+  currentRoute          String?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  movements             LogisticsMovement[]
+  legs                  LogisticsMovementLeg[]
+  assignments           LogisticsDriverAssignment[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, licensePlate])
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([vehicleType])
+  @@index([status])
+}
+
+model LogisticsProduct {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  name                  String
+  externalId            String    @unique
+  sku                   String    @unique
+  status                String    @default("ACTIVE") // ACTIVE, DISCONTINUED, ARCHIVED
+  
+  // Product classification
+  category              String
+  subcategory           String?
+  productType           String    // GENERAL, HAZMAT, FRAGILE, PERISHABLE, VALUABLE, BULK
+  
+  // Physical specifications
+  weightKg              Float
+  volumeM3              Float
+  length                Float?    // mm
+  width                 Float?    // mm
+  height                Float?    // mm
+  
+  // Handling requirements
+  handlingTemperatureMin Float?   // Celsius
+  handlingTemperatureMax Float?
+  handlingHumidityMin   Float?    // percentage
+  handlingHumidityMax   Float?
+  requiresRefrigeration Boolean   @default(false)
+  requiresHazmatHandling Boolean  @default(false)
+  
+  // Inventory unit
+  unitOfMeasure         String    // PCS, KG, L, M3, PALLET, CARTON
+  unitsPerPallet        Int?
+  palletWeight          Float?
+  
+  // Supplier & sourcing
+  supplierId            String?
+  leadTimedays          Int?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  stocks                LogisticsStock[]
+  items                 LogisticsInventoryItem[]
+  constraints           LogisticsConstraint[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, sku])
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([productType])
+  @@index([status])
+}
+
+model LogisticsStock {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  facilityId            String
+  productId             String
+  externalId            String    @unique
+  
+  // Stock quantities
+  quantityUnits         Int       @default(0)
+  quantityKg            Float     @default(0)
+  quantityM3            Float     @default(0)
+  palletCount           Int       @default(0)
+  
+  // Stock location in facility
+  zone                  String?   // e.g., "ZONE_A", "ZONE_B"
+  aisle                 String?
+  shelf                 String?
+  bin                   String?
+  
+  // Stock condition
+  status                String    @default("AVAILABLE") // AVAILABLE, RESERVED, DAMAGED, QUARANTINED, EXPIRED
+  conditionPercentage   Float     @default(100)
+  
+  // Temporal information
+  receivedDate          DateTime
+  expiryDate            DateTime?
+  lastCountDate         DateTime?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  facility              LogisticsFacility @relation(fields: [facilityId], references: [id])
+  product               LogisticsProduct @relation(fields: [productId], references: [id])
+  items                 LogisticsInventoryItem[]
+  movements             LogisticsInventoryMovement[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, facilityId, productId])
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([facilityId])
+  @@index([productId])
+  @@index([status])
+}
+
+model LogisticsInventoryItem {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  stockId               String
+  productId             String
+  externalId            String    @unique
+  
+  // Item tracking
+  serialNumber          String?   @unique
+  batchNumber           String?
+  lotNumber             String?
+  
+  // Item status
+  status                String    @default("AVAILABLE") // AVAILABLE, ALLOCATED, IN_TRANSIT, RECEIVED, DAMAGED, LOST
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  stock                 LogisticsStock @relation(fields: [stockId], references: [id])
+  product               LogisticsProduct @relation(fields: [productId], references: [id])
+  movements             LogisticsInventoryMovement[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([stockId])
+  @@index([serialNumber])
+}
+
+model LogisticsOrder {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  externalId            String    @unique
+  orderNumber           String    @unique
+  
+  // Order classification
+  orderType             String    // PURCHASE, SALES, TRANSFER, RETURN
+  status                String    @default("PENDING") // PENDING, CONFIRMED, DISPATCHED, IN_TRANSIT, DELIVERED, CANCELLED
+  priority              String    @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  
+  // Party information
+  originFacilityId      String?
+  destinationFacilityId String?
+  customerId            String?
+  supplierId            String?
+  
+  // Dates
+  createdDate           DateTime  @default(now())
+  requiredDeliveryDate  DateTime
+  actualDeliveryDate    DateTime?
+  
+  // Order metrics
+  totalQuantityUnits    Int
+  totalWeightKg         Float
+  totalVolumeM3         Float
+  totalValue            Float
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  items                 LogisticsOrderItem[]
+  movements             LogisticsMovement[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, orderNumber])
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([orderType])
+  @@index([status])
+  @@index([requiredDeliveryDate])
+}
+
+model LogisticsOrderItem {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  orderId               String
+  productId             String
+  externalId            String    @unique
+  
+  // Item quantities
+  quantityOrdered       Int
+  quantityAllocated     Int       @default(0)
+  quantityDispatched    Int       @default(0)
+  quantityReceived      Int       @default(0)
+  quantityRejected      Int       @default(0)
+  
+  // Unit information
+  unitPrice             Float
+  totalPrice            Float
+  
+  // Status
+  status                String    @default("PENDING") // PENDING, ALLOCATED, DISPATCHED, RECEIVED, PARTIAL, CANCELLED
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  order                 LogisticsOrder @relation(fields: [orderId], references: [id])
+  product               LogisticsProduct @relation(fields: [productId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([productId])
+  @@index([status])
+}
+
+model LogisticsMovement {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  orderId               String?
+  externalId            String    @unique
+  
+  // Movement classification
+  movementType          String    // INBOUND, OUTBOUND, INTERNAL_TRANSFER, RETURN
+  status                String    @default("PLANNED") // PLANNED, CONFIRMED, IN_TRANSIT, COMPLETED, CANCELLED, FAILED
+  
+  // Route information
+  originFacilityId      String
+  destinationFacilityId String
+  
+  // Assignment
+  assignedVehicleId     String?
+  assignedRoutePlanId   String?
+  
+  // Dates
+  plannedPickupDate     DateTime
+  plannedDeliveryDate   DateTime
+  actualPickupDate      DateTime?
+  actualDeliveryDate    DateTime?
+  
+  // Cargo information
+  totalWeightKg         Float
+  totalVolumeM3         Float
+  totalPallets          Int
+  totalValue            Float
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  order                 LogisticsOrder? @relation(fields: [orderId], references: [id])
+  vehicle               LogisticsVehicle? @relation(fields: [assignedVehicleId], references: [id])
+  legs                  LogisticsMovementLeg[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([status])
+  @@index([plannedDeliveryDate])
+}
+
+model LogisticsMovementLeg {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  movementId            String
+  facilityId            String
+  vehicleId             String?
+  externalId            String    @unique
+  legSequence           Int
+  
+  // Leg classification
+  legType               String    // PICKUP, DROPOFF, HUB_TRANSFER, CONSOLIDATION, CROSS_DOCK
+  status                String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, FAILED, SKIPPED
+  
+  // Planned vs actual
+  plannedArrivalTime    DateTime
+  plannedDepartureTime  DateTime
+  actualArrivalTime     DateTime?
+  actualDepartureTime   DateTime?
+  
+  // Dwell information
+  plannedDwellMinutes   Int
+  actualDwellMinutes    Int?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  movement              LogisticsMovement @relation(fields: [movementId], references: [id])
+  facility              LogisticsFacility @relation(fields: [facilityId], references: [id])
+  vehicle               LogisticsVehicle? @relation(fields: [vehicleId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([movementId])
+  @@index([facilityId])
+  @@index([status])
+}
+
+model LogisticsInventoryMovement {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  stockId               String
+  itemId                String?
+  externalId            String    @unique
+  
+  // Movement type
+  movementType          String    // RECEIPT, DISPATCH, INTERNAL_TRANSFER, ADJUSTMENT, RETURN
+  status                String    @default("PENDING") // PENDING, COMPLETED, FAILED, REVERSED
+  
+  // Source & destination
+  fromFacilityId        String?
+  toFacilityId          String?
+  fromZone              String?
+  toZone                String?
+  
+  // Quantity
+  quantityUnits         Int
+  quantityKg            Float
+  quantityM3            Float
+  
+  // Timing
+  requestedDate         DateTime
+  completedDate         DateTime?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  stock                 LogisticsStock @relation(fields: [stockId], references: [id])
+  item                  LogisticsInventoryItem? @relation(fields: [itemId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([stockId])
+  @@index([status])
+}
+
+model LogisticsDriver {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  externalId            String    @unique
+  name                  String
+  licenseNumber         String    @unique
+  status                String    @default("AVAILABLE") // AVAILABLE, ON_DUTY, OFF_DUTY, SUSPENDED, TERMINATED
+  
+  // Driver information
+  licenseType           String    // A, B, C, D, E (European classification)
+  licenseExpiryDate     DateTime
+  hazmatCertified       Boolean   @default(false)
+  
+  // Contact
+  phoneNumber           String?
+  email                 String?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  assignments           LogisticsDriverAssignment[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@unique([tenantId, licenseNumber])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model LogisticsDriverAssignment {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  driverId              String
+  vehicleId             String
+  externalId            String    @unique
+  
+  // Assignment timing
+  assignedDate          DateTime  @default(now())
+  unassignedDate        DateTime?
+  
+  // Status
+  status                String    @default("ACTIVE") // ACTIVE, INACTIVE, COMPLETED
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  driver                LogisticsDriver @relation(fields: [driverId], references: [id])
+  vehicle               LogisticsVehicle @relation(fields: [vehicleId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([driverId])
+  @@index([vehicleId])
+}
+
+model LogisticsRoute {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  externalId            String    @unique
+  routeName             String
+  
+  // Route definition
+  status                String    @default("ACTIVE") // ACTIVE, INACTIVE, ARCHIVED
+  routeType             String    // PICKUP, DELIVERY, PICKUP_DELIVERY, TRANSFER, CIRCULAR
+  
+  // Route metrics
+  estimatedDistanceKm   Float
+  estimatedTimeMinutes  Int
+  estimatedFuelCost     Float?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  waypoints             LogisticsRouteWaypoint[]
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([routeType])
+  @@index([status])
+}
+
+model LogisticsRouteWaypoint {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  routeId               String
+  externalId            String    @unique
+  
+  // Waypoint sequence
+  sequenceNumber        Int
+  
+  // Location
+  latitude              Float
+  longitude             Float
+  address               String?
+  facilityId            String?
+  
+  // Timing
+  plannedArrivalTime    DateTime?
+  plannedDepartureTime  DateTime?
+  plannedDwellMinutes   Int?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  route                 LogisticsRoute @relation(fields: [routeId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([routeId])
+  @@unique([tenantId, routeId, sequenceNumber])
+}
+
+model LogisticsConstraint {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  externalId            String    @unique
+  
+  // Constraint definition
+  constraintType        String    // CAPACITY, TIME_WINDOW, FACILITY, VEHICLE, PRODUCT, DRIVER, ROUTE, REGULATORY
+  constraintName        String
+  status                String    @default("ACTIVE") // ACTIVE, INACTIVE, ARCHIVED
+  
+  // Scoping
+  applicableToFacilityId String?
+  applicableToVehicleId  String?
+  applicableToProductId  String?
+  applicableToRouteName  String?
+  
+  // Constraint rules
+  ruleName              String
+  ruleDescription       String
+  ruleSeverity          String    // WARNING, ERROR, CRITICAL
+  ruleExpression        Json      // Structured constraint logic
+  
+  // Temporal scope
+  validFromDate         DateTime
+  validToDate           DateTime?
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  createdBy             String
+  version               Int       @default(1)
+  
+  // Relationships
+  facility              LogisticsFacility? @relation(fields: [applicableToFacilityId], references: [id])
+  vehicle               LogisticsVehicle? @relation(fields: [applicableToVehicleId], references: [id])
+  product               LogisticsProduct? @relation(fields: [applicableToProductId], references: [id])
+  events                LogisticsEvent[]
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([constraintType])
+  @@index([status])
+}
+
+model LogisticsEvent {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  externalId            String    @unique
+  
+  // Event classification
+  eventType             String    // FACILITY_*, VEHICLE_*, STOCK_*, ORDER_*, MOVEMENT_*, INVENTORY_*, DRIVER_*, ROUTE_*, CONSTRAINT_*
+  eventCategory         String    // OPERATIONAL, QUALITY, EXCEPTION, COMPLIANCE, SAFETY, PERFORMANCE
+  eventSeverity         String    @default("INFO") // DEBUG, INFO, WARNING, ERROR, CRITICAL
+  
+  // Event source & target
+  sourceEntityType      String?   // Entity type that generated the event
+  sourceEntityId        String?   // Entity ID that generated the event
+  targetEntityType      String?   // Entity type affected by the event
+  targetEntityId        String?   // Entity ID affected by the event
+  
+  // Event payload
+  eventTimestamp        DateTime
+  eventDescription      String
+  eventData             Json      // Flexible event payload
+  
+  // Audit trail
+  createdAt             DateTime  @default(now())
+  version               Int       @default(1)
+  
+  // Relationships
+  facility              LogisticsFacility? @relation(fields: [sourceEntityId], references: [id], name: "FacilityEvents")
+  vehicle               LogisticsVehicle? @relation(fields: [sourceEntityId], references: [id], name: "VehicleEvents")
+  stock                 LogisticsStock? @relation(fields: [sourceEntityId], references: [id])
+  product               LogisticsProduct? @relation(fields: [sourceEntityId], references: [id])
+  order                 LogisticsOrder? @relation(fields: [sourceEntityId], references: [id])
+  orderItem             LogisticsOrderItem? @relation(fields: [sourceEntityId], references: [id])
+  movement              LogisticsMovement? @relation(fields: [sourceEntityId], references: [id])
+  movementLeg           LogisticsMovementLeg? @relation(fields: [sourceEntityId], references: [id])
+  inventoryItem         LogisticsInventoryItem? @relation(fields: [sourceEntityId], references: [id])
+  inventoryMovement     LogisticsInventoryMovement? @relation(fields: [sourceEntityId], references: [id])
+  driver                LogisticsDriver? @relation(fields: [sourceEntityId], references: [id])
+  driverAssignment      LogisticsDriverAssignment? @relation(fields: [sourceEntityId], references: [id])
+  route                 LogisticsRoute? @relation(fields: [sourceEntityId], references: [id])
+  routeWaypoint         LogisticsRouteWaypoint? @relation(fields: [sourceEntityId], references: [id])
+  constraint            LogisticsConstraint? @relation(fields: [sourceEntityId], references: [id])
+  
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([eventCategory])
+  @@index([eventSeverity])
+  @@index([eventTimestamp])
+  @@index([sourceEntityType, sourceEntityId])
+}
+
+// Audit log for all state changes
+model LogisticsAudit {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  
+  // Change information
+  entityType            String
+  entityId              String
+  operation             String    // CREATE, UPDATE, DELETE
+  changeDescription     String
+  changeData            Json
+  
+  // Who & when
+  performedBy           String
+  performedAt           DateTime  @default(now())
+  
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([performedAt])
+}

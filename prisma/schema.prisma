@@ -1,0 +1,630 @@
+// Prisma schema generated from existing SQLite migrations (DB-00 findings)
+// This schema models the 25 tables discovered in the repository and adds enterprise fields
+// (tenantId, createdBy, updatedBy, createdAt, updatedAt, deletedAt, version) as the DB-01 design requires.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Models ---
+
+model Rule {
+  ruleId            String   @id @map("rule_id")
+  ruleVersion       String   @map("rule_version")
+  ruleSequence      Int      @map("rule_sequence")
+  ruleCategory      String   @map("rule_category")
+  evaluationStage   String   @map("evaluation_stage")
+  legalInstrument   String   @map("legal_instrument")
+  sectionOrReg      String?  @map("section_or_regulation")
+  tenderClause      String?  @map("tender_clause")
+  legalText         String   @map("legal_text")
+  effectiveFrom     String   @map("effective_from")
+  effectiveTo       String?  @map("effective_to")
+  severity          String
+  failureBehavior   String   @map("failure_behavior")
+  reviewBehavior    String   @map("review_behavior")
+  dependencies      Json?    @map("dependencies")
+  prerequisites      Json?   @map("prerequisites")
+  inputSchema       Json?    @map("input_schema")
+  outputSchema      Json?    @map("output_schema")
+  evidenceReq       Json?    @map("evidence_requirements")
+  compiledCode      String   @map("compiled_code")
+  compiledVersion   String   @map("compiled_version")
+  description       String?
+
+  // Enterprise fields
+  tenantId          String?  @db.VarChar(255)
+  createdBy         String?  @db.VarChar(255)
+  updatedBy         String?  @db.VarChar(255)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime? 
+  deletedAt         DateTime?
+  version           Int      @default(1)
+
+  @@map("rules")
+}
+
+model RuleVersion {
+  id                Int      @id @default(autoincrement()) @map("version_id")
+  ruleId            String   @map("rule_id")
+  version           String
+  createdAt         String   @map("created_at")
+  createdBy         String   @map("created_by")
+  changeReason      String?  @map("change_reason")
+  legalUpdate       String?  @map("legal_update")
+  tenderUpdate      String?  @map("tender_update")
+  contentJson       Json     @map("content_json")
+
+  tenantId          String?
+  createdAtTs       DateTime? 
+
+  @@map("rule_versions")
+}
+
+model RuleExecution {
+  executionId       String   @id @map("execution_id")
+  ruleId            String   @map("rule_id")
+  ruleVersion       String   @map("rule_version")
+  evaluationId      String   @map("evaluation_id")
+  tenderId          String   @map("tender_id")
+  bidId             String   @map("bid_id")
+  bidderId          String   @map("bidder_id")
+  executedBy        String   @map("executed_by")
+  executedAt        String   @map("executed_at")
+  status            String
+  confidence        Float
+  evidenceUsed      Json?    @map("evidence_used")
+  calculationDetails Json?   @map("calculation_details")
+  outputJson        Json?    @map("output_json")
+  errorCode         String?  @map("error_code")
+  errorMessage      String?  @map("error_message")
+  errorDetails      Json?    @map("error_details")
+  auditSignature    String   @map("audit_signature")
+  replayed          Int?     @default(0)
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+  version           Int      @default(1)
+
+  @@map("rule_executions")
+}
+
+model LegalInstrument {
+  instrumentCode    String   @id @map("instrument_code")
+  name              String
+  fullName          String   @map("full_name")
+  effectiveFrom     String   @map("effective_from")
+  effectiveTo       String?
+  country           String
+  language          String
+  description       String?
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+  version           Int      @default(1)
+
+  @@map("legal_instruments")
+}
+
+model LegalSection {
+  sectionId         String   @id @map("section_id")
+  instrumentCode    String   @map("instrument_code")
+  sectionNumber     String   @map("section_number")
+  subsection        String?
+  heading           String
+  fullText          String   @map("full_text")
+  interpretation    String?  @map("interpretation_guidance")
+  relatedSections   Json?    @map("related_sections")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+  version           Int      @default(1)
+
+  @@map("legal_sections")
+}
+
+model Evidence {
+  id                String   @id @map("evidence_id")
+  sourceId          String?  @map("source_id")
+  type              String?  @map("type")
+  contentJson       Json?    @map("content_json")
+  metadataJson      Json?    @map("metadata_json")
+  embeddings        Bytes?   @map("embeddings")
+
+  tenantId          String?
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+  version           Int      @default(1)
+
+  @@map("evidence")
+}
+
+model EvidenceRelationship {
+  id                Int      @id @default(autoincrement()) @map("relationship_id")
+  evidenceA         String   @map("evidence_a")
+  evidenceB         String   @map("evidence_b")
+  relationType      String   @map("relation_type")
+  metadata          Json?    @map("metadata")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("evidence_relationships")
+}
+
+model EvidenceConflict {
+  id                Int      @id @default(autoincrement()) @map("conflict_id")
+  evidenceId        String   @map("evidence_id")
+  conflictType      String   @map("conflict_type")
+  details           Json?    @map("details")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("evidence_conflicts")
+}
+
+model AiMemory {
+  id                String   @id @map("memory_id")
+  ownerId           String?  @map("owner_id")
+  memoryJson        Json?    @map("memory_json")
+  vector            Bytes?   @map("vector")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+
+  @@map("ai_memory")
+}
+
+model AiExecutionLog {
+  id                String   @id @map("log_id")
+  executionJson     Json?    @map("execution_json")
+  provider          String?
+  cost              Float?
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("ai_execution_logs")
+}
+
+model PromptRegistry {
+  id                String   @id @map("prompt_id")
+  name              String?
+  promptJson        Json?    @map("prompt_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("prompt_registry")
+}
+
+model AuditLog {
+  id                String   @id @map("audit_id")
+  actor             String?
+  action            String?
+  target            String?
+  details           Json?    @map("details")
+  timestamp         DateTime @default(now())
+
+  tenantId          String?
+
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id                String   @id @map("config_id")
+  key               String   @map("key")
+  valueJson         Json?    @map("value_json")
+  description       String?
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("system_configs")
+}
+
+model Conversation {
+  id                String   @id @map("conversation_id")
+  participants      Json?    @map("participants")
+  messagesJson      Json?    @map("messages_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("conversations")
+}
+
+model Notification {
+  id                String   @id @map("notification_id")
+  recipientId       String?  @map("recipient_id")
+  channel           String?
+  payloadJson       Json?    @map("payload_json")
+  status            String?  @map("status")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model User {
+  id                String   @id @map("user_id")
+  username          String?  @map("username")
+  email             String?  @map("email")
+  displayName       String?  @map("display_name")
+  profileJson       Json?    @map("profile_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime?
+
+  @@map("users")
+}
+
+model Organization {
+  id                String   @id @map("organization_id")
+  name              String?
+  metadata          Json?    @map("metadata")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("organizations")
+}
+
+model Role {
+  id                String   @id @map("role_id")
+  name              String?
+  permissions       Json?    @map("permissions")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("roles")
+}
+
+model Permission {
+  id                String   @id @map("permission_id")
+  name              String?
+  description       String?
+
+  @@map("permissions")
+}
+
+model Bidder {
+  id                String   @id @map("bidder_id")
+  name              String?
+  metadata          Json?
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("bidders")
+}
+
+model Document {
+  id                String   @id @map("document_id")
+  ownerId           String?  @map("owner_id")
+  mimeType          String?  @map("mime_type")
+  storagePath       String?  @map("storage_path")
+  metadataJson      Json?    @map("metadata_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("documents")
+}
+
+model PipelineStage {
+  id                Int      @id @default(autoincrement()) @map("stage_id")
+  name              String?
+  dataJson          Json?    @map("data_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("pipeline_stages")
+}
+
+model ProcurementRule {
+  id                Int      @id @default(autoincrement()) @map("procurement_rule_id")
+  ruleJson          Json?    @map("rule_json")
+
+  tenantId          String?
+  createdAt         DateTime @default(now())
+
+  @@map("procurement_rules")
+}
+
+// ==========================================
+// PHASE 01: AGENT REGISTRY
+// ==========================================
+
+model Agent {
+  // Identity
+  agentId           String   @id @map("agent_id")
+  agentName         String   @map("agent_name")
+  agentDomain       String   @map("agent_domain")
+
+  // Version & Status
+  version           String   @default("1.0.0")
+  status            String   @default("registered") // registered | active | idle | offline | failed
+  healthStatus      String   @default("healthy") @map("health_status") // healthy | degraded | unhealthy
+
+  // Ownership & Governance
+  ownerId           String?  @map("owner_id")
+  tenantId          String?  @map("tenant_id")
+
+  // Lifecycle
+  lastHeartbeat     DateTime? @map("last_heartbeat")
+  heartbeatIntervalSecs Int @default(30) @map("heartbeat_interval_secs")
+  healthCheckWindowSecs Int @default(90) @map("health_check_window_secs")
+
+  // Metadata
+  capabilities      Json?    @map("capabilities")
+  memoryTypes       Json?    @map("memory_types")
+  toolIds           Json?    @map("tool_ids")
+
+  // Region & Cost
+  region            String?  @map("region")
+  costEstimatePerHour Decimal? @map("cost_estimate_per_hour") @db.Decimal(10, 2)
+
+  // Audit Trail
+  createdAt         DateTime @default(now()) @map("created_at")
+  createdBy         String?  @map("created_by")
+  updatedAt         DateTime? @map("updated_at")
+  updatedBy         String?  @map("updated_by")
+  deletedAt         DateTime? @map("deleted_at")
+
+  // Enterprise
+  revisionNumber    Int      @default(1) @map("revision_number")
+
+  // Relations
+  registryEvents    AgentRegistryEvent[]
+
+  @@index([agentDomain, status])
+  @@index([tenantId])
+  @@index([lastHeartbeat])
+  @@index([region])
+  @@map("agents")
+}
+
+model AgentRegistryEvent {
+  // Identity
+  eventId           String   @id @map("event_id")
+  agentId           String   @map("agent_id")
+
+  // Event Data
+  eventType         String   @map("event_type") // register | heartbeat | status_change | health_change | deregister | failover
+  previousState     Json?    @map("previous_state")
+  newState          Json?    @map("new_state")
+
+  // Metadata
+  triggeredBy       String?  @map("triggered_by")
+  region            String?  @map("region")
+  errorMessage      String?  @map("error_message")
+
+  // Audit
+  createdAt         DateTime @default(now()) @map("created_at")
+  tenantId          String?  @map("tenant_id")
+
+  // Relations
+  agent             Agent    @relation(fields: [agentId], references: [agentId], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([region])
+  @@map("agent_registry_events")
+}
+
+// ==========================================
+// PHASE 6.0: PLATFORM ENGINE PERSISTENCE
+// ==========================================
+
+model OntologySchema {
+  schemaId        String   @id @map("schema_id")
+  schemaName      String   @map("schema_name")
+  entityType      String   @map("entity_type")
+  properties      Json     @map("properties")
+  description     String?
+  version         Int      @default(1)
+  tenantId        String?  @map("tenant_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@index([entityType])
+  @@index([tenantId])
+  @@map("ontology_schemas")
+}
+
+model OntologyEntity {
+  entityId        String   @id @map("entity_id")
+  entityType      String   @map("entity_type")
+  properties      Json     @map("properties")
+  schemaVersion   Int      @default(1) @map("schema_version")
+  tenantId        String?  @map("tenant_id")
+  createdBy       String?  @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@index([entityType])
+  @@index([tenantId])
+  @@map("ontology_entities")
+}
+
+model OntologyRelationship {
+  id              Int      @id @default(autoincrement())
+  sourceId        String   @map("source_id")
+  targetId        String   @map("target_id")
+  relationType    String   @map("relation_type")
+  metadata        Json?
+  tenantId        String?  @map("tenant_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationType])
+  @@index([tenantId])
+  @@map("ontology_relationships")
+}
+
+model EventRecord {
+  eventId         String   @id @map("event_id")
+  eventType       String   @map("event_type")
+  category        String
+  severity        String   @default("INFO")
+  status          String   @default("PENDING")
+  source          String
+  tenantId        String?  @map("tenant_id")
+  payload         Json     @map("payload")
+  correlationId   String?  @map("correlation_id")
+  causalityId     String?  @map("causality_id")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@index([eventType])
+  @@index([category])
+  @@index([severity])
+  @@index([tenantId])
+  @@index([correlationId])
+  @@index([createdAt])
+  @@map("event_records")
+}
+
+model MemoryRecord {
+  memoryId        String   @id @map("memory_id")
+  memoryType      String   @map("memory_type")
+  key             String
+  value           Json
+  classification  String   @default("INTERNAL")
+  tenantId        String?  @map("tenant_id")
+  agentId         String?  @map("agent_id")
+  workflowId      String?  @map("workflow_id")
+  loopId          String?  @map("loop_id")
+  correlationId   String?  @map("correlation_id")
+  tags            Json?
+  version         Int      @default(1)
+  encrypted       Boolean  @default(false)
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@index([memoryType])
+  @@index([key])
+  @@index([tenantId])
+  @@index([agentId])
+  @@index([expiresAt])
+  @@map("memory_records")
+}
+
+model DecisionRecord {
+  decisionId      String   @id @map("decision_id")
+  tenantId        String?  @map("tenant_id")
+  agentId         String?  @map("agent_id")
+  outcome         String
+  confidence      Float
+  reasoningChain  Json     @map("reasoning_chain")
+  evidenceKeys    Json     @map("evidence_keys")
+  alternatives    Json
+  riskScore       Float?
+  context         Json?
+  traceId         String?  @map("trace_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([agentId])
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("decision_records")
+}
+
+model WorkflowDefinition {
+  definitionId    String   @id @map("definition_id")
+  name            String
+  description     String?
+  nodes           Json
+  globalPolicy    Json?    @map("global_policy")
+  tenantId        String?  @map("tenant_id")
+  version         Int      @default(1)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@index([tenantId])
+  @@map("workflow_definitions")
+}
+
+model WorkflowInstance {
+  instanceId      String   @id @map("instance_id")
+  definitionId    String   @map("definition_id")
+  tenantId        String?  @map("tenant_id")
+  status          String   @default("REGISTERED")
+  context         Json?
+  stepStates      Json?    @map("step_states")
+  variables       Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@index([definitionId])
+  @@index([tenantId])
+  @@index([status])
+  @@map("workflow_instances")
+}
+
+model PolicyDefinition {
+  policyId        String   @id @map("policy_id")
+  code            String
+  name            String
+  description     String?
+  rules           Json
+  remediation     String?
+  tenantId        String?  @map("tenant_id")
+  version         Int      @default(1)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime? @map("updated_at")
+
+  @@index([code])
+  @@index([tenantId])
+  @@map("policy_definitions")
+}
+
+model GraphEdge {
+  id              Int      @id @default(autoincrement())
+  sourceId        String   @map("source_id")
+  targetId        String   @map("target_id")
+  edgeType        String   @map("edge_type")
+  graphType       String   @map("graph_type")
+  weight          Float?
+  metadata        Json?
+  tenantId        String?  @map("tenant_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([edgeType])
+  @@index([graphType])
+  @@index([tenantId])
+  @@map("graph_edges")
+}
+
+// End of schema
