@@ -37,6 +37,12 @@ interface Shipment {
   eta?: string;
 }
 
+interface SourceFreshness {
+  source: string;
+  status: 'LIVE' | 'STALE' | 'UNAVAILABLE';
+  lastUpdatedAt: string | null;
+}
+
 const severityConfig: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
   CRITICAL: { bg: '#dc262620', text: '#ef4444', icon: <AlertTriangle size={12} /> },
   WARNING: { bg: '#f59e0b20', text: '#f59e0b', icon: <AlertCircle size={12} /> },
@@ -62,15 +68,17 @@ const CommandCenter: React.FC = () => {
   const [events, setEvents] = useState<LogisticEvent[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [eventStatus, setEventStatus] = useState<'LIVE' | 'PAUSED' | 'STALE'>('PAUSED');
+  const [sourceFreshness, setSourceFreshness] = useState<SourceFreshness[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async () => {
     setRefreshing(true);
     try {
-      const [overviewRes, eventsRes, shipmentsRes] = await Promise.allSettled([
+      const [overviewRes, eventsRes, shipmentsRes, qualityRes] = await Promise.allSettled([
         fetch('/api/logistics/overview'),
         fetch('/api/logistics/events?limit=8'),
         fetch('/api/logistics/shipments?limit=5'),
+        fetch('/api/logistics/data-quality'),
       ]);
 
       // Process overview
@@ -126,6 +134,11 @@ const CommandCenter: React.FC = () => {
       if (shipmentsRes.status === 'fulfilled' && shipmentsRes.value.ok) {
         const body = await shipmentsRes.value.json();
         setShipments(body.data?.shipments || []);
+      }
+
+      if (qualityRes.status === 'fulfilled' && qualityRes.value.ok) {
+        const body = await qualityRes.value.json();
+        setSourceFreshness(body.data?.freshness || []);
       }
     } catch (err) {
       console.error('CommandCenter fetch error:', err);
@@ -185,6 +198,26 @@ const CommandCenter: React.FC = () => {
           <p className="text-xs mt-0.5" style={{ color: colors.logistics.textMuted }}>
             Operational intelligence and decision support
           </p>
+        </div>
+        <div className="flex items-center gap-2 text-[10px]" style={{ color: colors.logistics.textMuted }}>
+          <span>DATA SOURCES</span>
+          {sourceFreshness.length === 0 ? (
+            <span className="px-2 py-1 rounded bg-slate-500/10">UNVERIFIED</span>
+          ) : (
+            <span
+              className="px-2 py-1 rounded"
+              style={{
+                backgroundColor: sourceFreshness.every(source => source.status === 'LIVE')
+                  ? '#10b98120'
+                  : '#f59e0b20',
+                color: sourceFreshness.every(source => source.status === 'LIVE')
+                  ? '#10b981'
+                  : '#f59e0b',
+              }}
+            >
+              {sourceFreshness.every(source => source.status === 'LIVE') ? 'LIVE' : 'REVIEW'}
+            </span>
+          )}
         </div>
         <button
           onClick={fetchData}

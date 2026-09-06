@@ -13,6 +13,8 @@ import type { DatabaseCore } from '../../database/db-core';
 import type { KnowledgeGraph } from '../../evaluation/knowledge-graph';
 import { AuthorizationService } from '../../security/authorization-service';
 import type { AuditLogger } from '../../observability/audit-logger';
+import { assessCriticality, assessStockRisk } from './inventory-intelligence';
+import { buildSourceFreshness } from './data-quality';
 
 interface KPIMetric {
   label: string;
@@ -54,6 +56,42 @@ export function createLogisticsApiRouter(deps: LogisticsApiDeps): express.Router
   const router = express.Router();
   const { db, authz, audit } = deps;
 
+  // GET /api/logistics/data-quality
+  // Reports only timestamps and counts present in the operational store.
+  router.get('/data-quality', async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId || 'ketraco';
+      const canRead = await authz.check((req as any).userId, 'logistics', 'read', { tenantId });
+      if (!canRead) return fail(res, 403, 'UNAUTHORIZED', 'Not authorized to read logistics data quality');
+
+      const sources = [
+        { source: 'shipments', table: 'logistics_order' },
+        { source: 'stock', table: 'logistics_stock' },
+        { source: 'facilities', table: 'logistics_facility' },
+        { source: 'events', table: 'logistics_event' },
+      ];
+      const freshness = await Promise.all(sources.map(async ({ source, table }) => {
+        const row = await db.get<{ recordCount: number; lastUpdatedAt: string | null }>(
+          `SELECT COUNT(*) as recordCount, MAX(updated_at) as lastUpdatedAt FROM ${table} WHERE tenant_id = ?`,
+          [tenantId],
+        );
+        return buildSourceFreshness(source, table, Number(row?.recordCount || 0), row?.lastUpdatedAt);
+      }));
+
+      return ok(res, {
+        generatedAt: new Date().toISOString(),
+        tenantId,
+        freshness,
+        importIntelligence: {
+          status: 'UNVERIFIED',
+          reason: 'No validated customs, port, carrier or import milestone source is persisted in the logistics domain.',
+        },
+      });
+    } catch (error) {
+      return fail(res, 500, 'DATA_QUALITY_ERROR', 'Failed to retrieve logistics data quality', error);
+    }
+  });
+
   // =====================================================================
   // GET /api/logistics/overview
   // =====================================================================
@@ -68,6 +106,8 @@ export function createLogisticsApiRouter(deps: LogisticsApiDeps): express.Router
         resourceId: tenantId,
         status: 'initiated'
       });
+
+
 
       let dataAvailable = true;
 
@@ -381,6 +421,67 @@ export function createLogisticsApiRouter(deps: LogisticsApiDeps): express.Router
       return ok(res, { inventory: enriched, timestamp: new Date().toISOString() });
     } catch (error) {
       return fail(res, 500, 'INVENTORY_ERROR', 'Failed to retrieve inventory', error);
+    }
+  });
+
+  // GET /api/logistics/inventory/risk
+  // Risk remains UNVERIFIED when validated consumption data is not supplied.
+  router.get('/inventory/risk', async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).tenantId || 'ketraco';
+      const canRead = await authz.check((req as any).userId, 'inventory', 'read', { tenantId });
+      if (!canRead) return fail(res, 403, 'UNAUTHORIZED', 'Not authorized to read inventory risk');
+
+      const dailyConsumptionParam = req.query.dailyConsumption as string | undefined;
+      const leadTimeParam = req.query.leadTimeDays as string | undefined;
+      const dailyConsumption = dailyConsumptionParam === undefined ? undefined : Number(dailyConsumptionParam);
+      const leadTimeDays = leadTimeParam === undefined ? undefined : Number(leadTimeParam);
+      if (dailyConsumption !== undefined && (!Number.isFinite(dailyConsumption) || dailyConsumption < 0)) {
+        return fail(res, 400, 'INVALID_DAILY_CONSUMPTION', 'dailyConsumption must be a non-negative number');
+      }
+      if (leadTimeDays !== undefined && (!Number.isFinite(leadTimeDays) || leadTimeDays < 0)) {
+        return fail(res, 400, 'INVALID_LEAD_TIME', 'leadTimeDays must be a non-negative number');
+      }
+
+      const rows = await db.all<any>(
+        `SELECT s.id, s.product_id as productId, p.sku, p.name, p.category,
+                s.quantity, s.reserved, s.status, f.id as facilityId, f.name as facilityName
+           FROM logistics_stock s
+           JOIN logistics_product p ON p.id = s.product_id AND p.tenant_id = s.tenant_id
+           JOIN logistics_facility f ON f.id = s.facility_id AND f.tenant_id = s.tenant_id
+          WHERE s.tenant_id = ?
+          ORDER BY s.updated_at DESC`,
+        [tenantId],
+      );
+
+      const assessments = rows.map(row => ({
+        stock: {
+          id: row.id,
+          productId: row.productId,
+          sku: row.sku,
+          name: row.name,
+          category: row.category,
+          facilityId: row.facilityId,
+          facilityName: row.facilityName,
+          status: row.status,
+        },
+        criticality: assessCriticality({}, 'logistics_product/logistics_stock'),
+        stockRisk: assessStockRisk({
+          quantityOnHand: Number(row.quantity || 0),
+          reservedQuantity: Number(row.reserved || 0),
+          dailyConsumption,
+          leadTimeDays,
+        }, 'logistics_stock'),
+      }));
+
+      return ok(res, {
+        deterministic: true,
+        generatedAt: new Date().toISOString(),
+        inputs: { dailyConsumption, leadTimeDays },
+        assessments,
+      });
+    } catch (error) {
+      return fail(res, 500, 'INVENTORY_RISK_ERROR', 'Failed to calculate inventory risk', error);
     }
   });
 

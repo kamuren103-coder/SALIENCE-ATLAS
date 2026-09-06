@@ -2,11 +2,13 @@
 
 This register tracks the canonical operational modules for Salience Atlas and preserves the current engineering status without inventing completion states.
 
+Phase 05 update: `ATLAS-NPI-001` adds the National Procurement evidence-backed read contract. Existing fixture-backed procurement UI remains partial.
+
 ## Active target module
 
 - TARGET_MODULE: `logistics-intelligence`
 - Current route: `src/components/logistics` + `/api/logistics`
-- Current implementation: `LogisticsView`, `CommandCenter`, and `backend/domains/logistics/api-routes.ts`
+- Current implementation: `LogisticsView`, `CommandCenter`, `backend/domains/logistics/api-routes.ts`, and the source freshness contract
 
 ## Canonical 20-module register
 
@@ -14,9 +16,9 @@ This register tracks the canonical operational modules for Salience Atlas and pr
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | exec-command-center | Executive Mission Control | Provide enterprise command and oversight across operating domains | Partial | `src/components/ketraco/command-center` | Protected command shell and mission surfaces | Partial | Partial | Partial | Implemented subset | Partial | Partial | Partial | 2026-09-03 | Integrate canonical graph and event contracts without redesign |
 | national-grid-intelligence | National Grid Intelligence | Observe and reason over transmission and distribution grid states | Partial | `src/components/ketraco/command-center` + grid domains | Grid telemetry, outage, and planning surfaces | Partial | Partial | Partial | Partial | Partial | Partial | Partial | 2026-09-03 | Canonical asset/twin and live-source contracts |
-| capital-projects-intelligence | Capital Projects Intelligence | Track project health, dependencies, and supply impacts | Partial | `src/components/ketraco/ScmModules` | Project supply nexus and project service surfaces | Partial | Partial | Partial | Partial | Partial | Partial | Partial | 2026-09-03 | Project health/dependency model |
-| procurement-intelligence | Procurement Intelligence | Manage tender, evaluation, rules, and evidence | Implemented subset | `src/components/ketraco/TenderStudio` + services | Tender evaluation and workflow services | Partial | Partial | Implemented subset | Implemented subset | Implemented subset | Partial | Partial | 2026-09-03 | Consolidate procurement ontology and approval workflow |
-| supplier-market-intelligence | Supplier & Market Intelligence | Model supplier networks, risk, and market exposure | Partial | `src/components/ketraco/ScmModules` | Supplier components and relation analysis | Partial | Partial | Partial | Partial | Partial | Partial | Partial | 2026-09-03 | Ownership, market, and concentration graph |
+| capital-projects-intelligence | Capital Projects Intelligence | Track project health, dependencies, and supply impacts | Implemented subset | `/api/project-supply` + `src/components/ketraco/ScmModules` | Tenant-scoped requirements, supply positions, bounded graph projection | Partial | Partial | Not started | Partial | Partial | Validated subset | Partial | 2026-09-06 | Canonical milestones, contracts, site delivery, cost and governed workflows |
+| procurement-intelligence | Procurement Intelligence | Manage procurement lifecycle, tender evaluation, rules, and evidence | Implemented subset | `backend/domains/procurement`, `/api/procurement`, `migration-006` | Evaluation, graph, and audit services | Partial | Partial | Implemented subset | Implemented subset | Implemented subset | Partial | Partial | 2026-09-03 | Connect canonical requisition, bid, award, contract, market, event, workflow, and AI sources |
+| supplier-market-intelligence | Supplier & Market Intelligence | Model supplier networks, risk, and market exposure | Implemented subset | `/api/suppliers` + `src/components/twin/SupplierTwin` | Governed supplier graph neighborhood and order-derived performance | Partial | Not started | Partial | Partial | Partial | Partial | Implemented subset | 2026-09-06 | Canonical supplier master, compliance, documents, spend and governed analyst tools |
 | commercial-intelligence | Contract & Commercial Intelligence | Govern contracts, obligations, payments, and claims | Partial | contract intelligence surfaces | Contract components and evaluation services | Partial | Partial | Partial | Partial | Partial | Partial | Partial | 2026-09-03 | Obligation, claim, payment, and provenance contracts |
 | land-wayleave-intelligence | Land & Wayleave Intelligence | Manage parcels, permits, easements, and access rights | Planned | None identified | No reliable implementation evidence | Planned | Planned | Planned | Planned | Planned | Planned | Planned | 2026-09-03 | Define parcel/wayleave ontology and GIS integration |
 | gis-spatial-intelligence | GIS & Spatial Intelligence | Combine spatial context with operational planning and assets | Partial | graph and location-related surfaces | Map/location and spatial-aware components | Partial | Partial | Partial | Partial | Partial | Partial | Partial | 2026-09-03 | Horizontal spatial enrichment service |

@@ -111,6 +111,9 @@ import { DatabaseCore } from './backend/database/db-core';
 import { AuthorizationService } from './backend/security/authorization-service';
 import { createFinanceApiRouter } from './backend/finance/api-routes';
 import { createLogisticsApiRouter } from './backend/domains/logistics/api-routes';
+import { createSupplierApiRouter } from './backend/domains/supplier/api-routes';
+import { createProjectSupplyApiRouter } from './backend/domains/project-supply/api-routes';
+import { createProcurementApiRouter } from './backend/domains/procurement/api-routes';
 
 // ENTERPRISE EVALUATION V2 SERVICES
 import { EvaluationService } from './backend/evaluation/evaluation-service';
@@ -294,6 +297,8 @@ async function startServer() {
   app.use('/api/ai', ApiGatewayMiddleware.authenticate, ApiGatewayMiddleware.aiGuard);
   app.use('/api/finance', ApiGatewayMiddleware.authenticate, ApiGatewayMiddleware.aiGuard);
   app.use('/api/logistics', ApiGatewayMiddleware.authenticate);
+  app.use('/api/suppliers', ApiGatewayMiddleware.authenticate);
+  app.use('/api/project-supply', ApiGatewayMiddleware.authenticate);
 
   // Expose Salience Atlas Procurement Copilot Integration Layer (Phase 18)
   app.use('/api', chromeExtensionApiRouter);
@@ -2433,6 +2438,85 @@ ${getSimulatedIntelliResponse(module, prompt)}`
       audit: auditAdapter
     }));
     console.log('[KETRACO LOGISTICS] Phase 02 — /api/logistics mounted successfully');
+  }
+
+  // ================================================================
+  // SUPPLIER INTELLIGENCE — PHASE 03 — /api/suppliers MOUNT
+  // ================================================================
+  {
+    const db = DatabaseCore.getInstance();
+    const authz = AuthorizationService.getInstance();
+    const auditAdapter = {
+      log: (entry: { actor: string; action: string; resourceType: string; resourceId: string; status: string; metadata?: Record<string, unknown> }) => {
+        EvaluationAuditService.log(
+          entry.actor,
+          `[SUPPLIER] ${entry.action}`,
+          'SYSTEM',
+          JSON.stringify({ resourceId: entry.resourceId, status: entry.status, ...entry.metadata }),
+        );
+      },
+    };
+    const kg = KnowledgeGraphService.getInstance();
+    app.use('/api/suppliers', createSupplierApiRouter({
+      db,
+      kg: kg.getGraph(),
+      authz,
+      audit: auditAdapter,
+    }));
+    console.log('[KETRACO SUPPLIER] Phase 03 — /api/suppliers mounted successfully');
+  }
+
+  // ================================================================
+  // PROJECT SUPPLY NEXUS — PHASE 04 — /api/project-supply MOUNT
+  // ================================================================
+  {
+    const db = DatabaseCore.getInstance();
+    const authz = AuthorizationService.getInstance();
+    const auditAdapter = {
+      log: (entry: { actor: string; action: string; resourceType: string; resourceId: string; status: string; metadata?: Record<string, unknown> }) => {
+        EvaluationAuditService.log(
+          entry.actor,
+          `[PROJECT-SUPPLY] ${entry.action}`,
+          'SYSTEM',
+          JSON.stringify({ resourceId: entry.resourceId, status: entry.status, ...entry.metadata }),
+        );
+      },
+    };
+    const kg = KnowledgeGraphService.getInstance();
+    app.use('/api/project-supply', createProjectSupplyApiRouter({
+      db,
+      kg: kg.getGraph(),
+      authz,
+      audit: auditAdapter,
+    }));
+    console.log('[KETRACO PROJECT SUPPLY] Phase 04 — /api/project-supply mounted successfully');
+  }
+
+  // ================================================================
+  // NATIONAL PROCUREMENT INTELLIGENCE — PHASE 05 — /api/procurement MOUNT
+  // ================================================================
+  {
+    const db = DatabaseCore.getInstance();
+    const authz = AuthorizationService.getInstance();
+    const auditAdapter = {
+      log: (entry: { actor: string; action: string; resourceType: string; resourceId: string; status: string; metadata?: Record<string, unknown> }) => {
+        EvaluationAuditService.log(
+          entry.actor,
+          `[NATIONAL-PROCUREMENT] ${entry.action}`,
+          'SYSTEM',
+          JSON.stringify({ resourceId: entry.resourceId, status: entry.status, ...entry.metadata }),
+        );
+      },
+    };
+    const kg = KnowledgeGraphService.getInstance();
+    app.use('/api/procurement', ApiGatewayMiddleware.authenticate);
+    app.use('/api/procurement', createProcurementApiRouter({
+      db,
+      kg: kg.getGraph(),
+      authz,
+      audit: auditAdapter,
+    }));
+    console.log('[KETRACO NATIONAL PROCUREMENT] Phase 05 — /api/procurement mounted successfully');
   }
 
   // Mount Vite development middleware in non-production environments

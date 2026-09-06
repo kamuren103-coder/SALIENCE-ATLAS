@@ -11,7 +11,8 @@ export class AuthorizationService {
     'admin': ['*'],
     'Administrator': ['*'],
     'Director Grid Logistics': [
-      'tender:view', 'tender:create', 'tender:edit', 'tender:draft', 'tender:approve_minor',
+      'project:read',
+      'tender:view', 'procurement:read', 'tender:create', 'tender:edit', 'tender:draft', 'tender:approve_minor',
       'contract:view', 'contract:edit', 'contract:sign',
       'workflow:view', 'workflow:trigger',
       'agent:view', 'agent:execute',
@@ -21,7 +22,8 @@ export class AuthorizationService {
       'finance_quality:view', 'finance_lineage:view'
     ],
     'Chief Procurement Officer': [
-      'tender:view', 'tender:create', 'tender:edit', 'tender:draft', 'tender:approve_minor', 'tender:approve_major',
+      'project:read',
+      'tender:view', 'procurement:read', 'tender:create', 'tender:edit', 'tender:draft', 'tender:approve_minor', 'tender:approve_major',
       'contract:view', 'contract:edit', 'contract:sign',
       'workflow:view', 'workflow:trigger', 'workflow:override',
       'agent:view', 'agent:execute', 'agent:collaborate',
@@ -31,7 +33,8 @@ export class AuthorizationService {
       'finance_quality:view', 'finance_lineage:view'
     ],
     'SCM Intelligence Officer': [
-      'tender:view', 'tender:create', 'tender:edit', 'tender:draft',
+      'project:read',
+      'tender:view', 'procurement:read', 'tender:create', 'tender:edit', 'tender:draft',
       'contract:view', 'contract:edit',
       'workflow:view', 'workflow:trigger',
       'agent:view', 'agent:execute',
@@ -41,7 +44,8 @@ export class AuthorizationService {
       'finance_quality:view', 'finance_lineage:view'
     ],
     'Board Director': [
-      'tender:view', 'tender:approve_major', 'tender:award',
+      'project:read',
+      'tender:view', 'procurement:read', 'tender:approve_major', 'tender:award',
       'contract:view',
       'workflow:view',
       'compliance:view',
@@ -52,7 +56,7 @@ export class AuthorizationService {
       'finance_risk:view'
     ],
     'Guest': [
-      'tender:view',
+      'tender:view', 'procurement:read',
       'contract:view',
       'workflow:view'
     ],
@@ -148,6 +152,7 @@ export class AuthorizationService {
       'finance:configure_policy'
     ],
     'AUDITOR': [
+      'project:read',
       'tender:view',
       'contract:view',
       'compliance:view',

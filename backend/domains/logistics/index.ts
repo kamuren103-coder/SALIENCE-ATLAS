@@ -11,6 +11,8 @@ export * from './types';
 
 // Graph engine (Phase 02 foundation)
 export * from './graph/engine';
+export * from './inventory-intelligence';
+export * from './data-quality';
 
 // Re-exports for convenience
 export {

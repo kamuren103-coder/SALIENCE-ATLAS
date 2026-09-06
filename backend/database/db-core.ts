@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs';
 import { FinanceDataFabricMigration } from './migration-003-finance-data-fabric';
 import { LogisticsDomainMigration } from './migration-004-logistics-domain';
+import { ProjectSupplyNexusMigration } from './migration-005-project-supply-nexus';
+import { NationalProcurementMigration } from './migration-006-national-procurement';
 
 export interface DatabaseHealth {
   status: 'UP' | 'DOWN';
@@ -344,6 +346,12 @@ export class DatabaseCore {
 
     // Phase 02 — Logistics Domain migration (idempotent standalone module)
     await LogisticsDomainMigration.apply(this);
+
+    // Phase 04 — Project Supply Nexus requirement contract
+    await ProjectSupplyNexusMigration.apply(this);
+
+    // Phase 05 — National Procurement Intelligence evidence contract
+    await NationalProcurementMigration.apply(this);
 
     return migrationsCount;
   }

@@ -42,6 +42,7 @@ The project already contains a logistics domain with APIs and a command center s
 - Fleet and operational event summaries
 - Ongoing command center UI shell with status cards and timeline views
 - Security and audit hooks integrated at route boundaries
+- Tenant-scoped source freshness and import-data availability reporting
 
 ## Existing Routes
 
@@ -53,6 +54,7 @@ The project already contains a logistics domain with APIs and a command center s
 - `GET /api/logistics/warehouses`
 - `GET /api/logistics/events`
 - `GET /api/logistics/twin/:entityId`
+- `GET /api/logistics/data-quality`
 
 Evidence:
 - `backend/domains/logistics/api-routes.ts`
@@ -86,6 +88,7 @@ Evidence:
 - `backend/database/db-core.ts`
 - `backend/database/migration-004-logistics-domain.ts`
 - `prisma/schema-logistics.prisma`
+- `backend/domains/logistics/data-quality.ts`
 
 ## Existing Data Sources
 
@@ -97,6 +100,9 @@ Evidence:
 ## Existing AI Capabilities
 
 No dedicated AI model execution is implemented for this module in the current route layer. The module is operationally data-driven rather than LLM-driven. It remains tied to the shared Atlas platform and security/audit context rather than a dedicated autonomous agent workflow.
+
+Import/customs/port milestones and predictive ETA remain unverified until
+validated source contracts are persisted.
 
 ## Existing Graph Relationships
 
@@ -165,6 +171,8 @@ The model is not yet a full causal or graph-native intelligence model; it is a p
 5. Response is normalized into overview, shipment, inventory, or fleet payloads
 6. Audit log records event metadata
 7. UI consumes the payload in the logistics view
+8. `/data-quality` reports persisted source timestamps and unavailable import
+   sources explicitly
 
 ## UI Architecture
 
@@ -185,7 +193,7 @@ The model is not yet a full causal or graph-native intelligence model; it is a p
 
 Validated through:
 
-- `npm run lint -- --pretty false` (TypeScript contract pass)
+- targeted TypeScript checks for logistics primitives
 - `npm run build` (production build pass)
 
 Observed current evidence:
@@ -211,7 +219,8 @@ Mitigation:
 ## Known Limitations
 
 - Graph relationships remain incomplete and not fully canonical.
-- Event freshness is not yet integrated as a robust dependency stream.
+- Event freshness is exposed as a source-quality contract, but import
+  dependency streams are not yet integrated.
 - The module is implemented as a partial subset rather than a fully standardized Atlas module.
 - Some operational intelligence remains encoded in KPI heuristics instead of graph-informed decisions.
 

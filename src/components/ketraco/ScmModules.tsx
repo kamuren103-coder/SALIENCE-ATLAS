@@ -17,34 +17,32 @@ interface ScmModuleProps {
 // 1. PROJECT SUPPLY NEXUS MODULE
 // ==========================================
 export function ProjectSupplyNexus({ onAskCopilot }: ScmModuleProps) {
-  const [bomStatus, setBomStatus] = useState({
-    cables: 94,
-    transformers: 80,
-    insulators: 70,
-    towers: 100
-  });
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [watchlist, setWatchlist] = useState<ProcurementEntity[]>([]);
-  const [nexusHealth, setNexusHealth] = useState<'LIVE' | 'ERROR'>('LIVE');
+  const [nexusHealth, setNexusHealth] = useState<'LIVE' | 'ERROR'>('ERROR');
+  const [requirementCount, setRequirementCount] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function loadWatch() {
+    async function loadNexus() {
       try {
-        const res = await fetch('/api/scm/procurement-intelligence/entities');
+        const res = await fetch('/api/project-supply/projects/project-suswa-04');
         if (!res.ok) throw new Error('engine unavailable');
         const data = await res.json();
         if (cancelled) return;
-        const atRisk = (data.entities ?? []).filter(
-          (e: ProcurementEntity) => e.status === 'CRITICAL' || e.status === 'ESCALATED' || e.status === 'DEGRADED'
-        );
-        setWatchlist(atRisk);
-        setNexusHealth('LIVE');
+        const nexus = data.data;
+        setRequirementCount(Array.isArray(nexus?.requirements) ? nexus.requirements.length : 0);
+        setWatchlist([]);
+        setNexusHealth(nexus?.dataStatus === 'DERIVED' ? 'LIVE' : 'ERROR');
       } catch {
-        if (!cancelled) { setWatchlist([]); setNexusHealth('ERROR'); }
+        if (!cancelled) {
+          setWatchlist([]);
+          setRequirementCount(null);
+          setNexusHealth('ERROR');
+        }
       }
     }
-    loadWatch();
+    loadNexus();
     return () => { cancelled = true; };
   }, []);
 
@@ -56,66 +54,27 @@ export function ProjectSupplyNexus({ onAskCopilot }: ScmModuleProps) {
         mission="Enterprise supply intelligence across procurement, suppliers, inventory and logistics."
         description="Material readiness, Bill of Materials (BOM) matching, and critical path risk prediction for transmission lines."
         metrics={[
-          { label: 'BOM Readiness', value: '86%', unit: 'OVERALL', icon: Layers, tone: 'info' },
+          { label: 'BOM Readiness', value: requirementCount === null ? '—' : 'EVIDENCE', unit: requirementCount === null ? 'UNAVAILABLE' : 'CONNECTED', icon: Layers, tone: requirementCount === null ? 'risk' : 'info' },
           { label: 'Live Warnings', value: watchlist.length, icon: ShieldAlert, tone: watchlist.length > 0 ? 'risk' : 'healthy' },
-          { label: 'Line Items Tracked', value: 18, icon: Database, tone: 'healthy' },
+          { label: 'Requirements Tracked', value: requirementCount ?? '—', icon: Database, tone: requirementCount === null ? 'risk' : 'healthy' },
           { label: 'Engine', value: nexusHealth === 'LIVE' ? 'LIVE' : 'OFFLINE', icon: Zap, tone: nexusHealth === 'LIVE' ? 'ai' : 'risk' },
         ]}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 px-6">
-        {/* BOM Analysis Card (7 cols) */}
+        {/* Requirement evidence card */}
         <div className="md:col-span-12 lg:col-span-7 glass-panel p-5 rounded-2xl border border-slate-800/40 space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-sm font-semibold text-white tracking-wide">Suswa Lot 4 Bill of Materials (BOM) Ratio</h2>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">86% OVERALL READY</span>
+            <h2 className="text-sm font-semibold text-white tracking-wide">Project Requirement Evidence</h2>
+            <span className="text-[10px] font-mono text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded">
+              {requirementCount === null ? 'UNAVAILABLE' : `${requirementCount} REQUIREMENTS`}
+            </span>
           </div>
-
-          <div className="space-y-4">
-            {/* Cable conductor */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">Conductor Metal Cable Kits (Alu)</span>
-                <span className="font-mono font-medium text-white">{bomStatus.cables}% Ready</span>
-              </div>
-              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full" style={{ width: `${bomStatus.cables}%` }}></div>
-              </div>
-            </div>
-
-            {/* Transformer */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">220/132kV Solid Substation Transformer</span>
-                <span className="font-mono font-medium text-white">{bomStatus.transformers}% Ready</span>
-              </div>
-              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full" style={{ width: `${bomStatus.transformers}%` }}></div>
-              </div>
-            </div>
-
-            {/* Insulators */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">EHV Glass Insulators & Bushings</span>
-                <span className="font-mono font-medium text-amber-400">{bomStatus.insulators}% Ready (Low)</span>
-              </div>
-              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 h-full rounded-full" style={{ width: `${bomStatus.insulators}%` }}></div>
-              </div>
-            </div>
-
-            {/* Towers */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">Galvanized Double-Circuit Steel Towers</span>
-                <span className="font-mono font-medium text-white">{bomStatus.towers}% Ready</span>
-              </div>
-              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full" style={{ width: `${bomStatus.towers}%` }}></div>
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-slate-400">
+            {requirementCount === null
+              ? 'No authenticated project requirement contract is available. Readiness percentages and material quantities are intentionally not shown.'
+              : 'Readiness is derived from persisted project requirements and linked logistics evidence.'}
+          </p>
         </div>
 
         {/* Live Autonomous watch — real entity status (5 cols) */}

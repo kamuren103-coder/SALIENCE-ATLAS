@@ -8,7 +8,9 @@
 | AI providers | `backend/ai-federation`, `backend/ai-runtime`, `/api/ai` | Present; provider health and offline behavior must be surfaced |
 | Evaluation/procurement | `backend/evaluation`, `/api/evaluation`, `/api/v2/evaluation` | Strongest domain contract surface |
 | Finance | `backend/finance`, `/api/finance`, finance UI | Present; cross-domain links needed |
-| Logistics | `backend/domains/logistics`, `/api/logistics`, logistics UI | Present; source freshness and event integration needed |
+| Logistics | `backend/domains/logistics`, `/api/logistics`, logistics UI | Present; source freshness is exposed, import source integration remains needed |
+| Supplier intelligence | `backend/domains/supplier`, `/api/suppliers`, shared graph/evaluation | Present as governed read subset; canonical supplier master remains needed |
+| Project Supply Nexus | `backend/domains/project-supply`, `/api/project-supply`, project requirement migration | `ATLAS-PSN-001`; partial requirement and logistics evidence path |
 | Graph/twin | graph services, graph schema, graph UI, evaluation graph/twin APIs | Present; canonical IDs and evidence needed |
 | Agents | backend agent fabric and `src/core/agents` | Two runtime families require an interoperability decision |
 | Workflow/loops | backend mission/planning engines and `src/core/loop`/workflow | Present; unify events, approvals, and audit |

@@ -328,7 +328,11 @@ export const createProjectSupplyAgent = () => {
     ],
     [
       new SCMTool('BOM Material Readiness Scorer', 'Scores actual vs purchased hardware matching percentages.', async (args) => {
-        return { matchedAt: '84.0%', missingCriticalBOMParts: ['220kV Insulators Lot 3'] };
+        return {
+          status: 'UNAVAILABLE',
+          message: 'Project requirements and linked logistics evidence are not available to this agent tool.',
+          sources: [],
+        };
       })
     ],
     {
