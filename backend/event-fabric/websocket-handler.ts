@@ -6,7 +6,7 @@
  */
 
 import { Server as HTTPServer } from 'http';
-import { Server as WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { CanonicalEvent, EventFilter } from './types';
 import { EventBus } from './event-bus';

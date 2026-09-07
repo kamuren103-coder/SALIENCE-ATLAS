@@ -1,123 +1,146 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Power, Layers, ChevronLeft, X } from 'lucide-react';
-import { useShell } from './ShellContext';
-import type { ShellNavItem } from './types';
-import { motionTokens } from '../../design-system/tokens';
+import { 
+  LayoutDashboard, 
+  Zap, 
+  Plane, 
+  Cpu, 
+  GitBranch, 
+  Truck, 
+  Coins, 
+  ShieldAlert, 
+  ChevronLeft, 
+  ChevronRight,
+  Boxes,
+  Layers,
+  FileText,
+  FolderKanban,
+  Building2,
+  TrendingUp,
+  FileCheck2,
+  Award,
+  CheckSquare,
+  Bot,
+  Server,
+  Users,
+  Network,
+  Activity
+} from 'lucide-react';
+import { ModuleId } from '../../types';
 
 interface GlobalSidebarProps {
-  items: ShellNavItem[];
-  activeModule: string;
-  onNavigate: (id: string) => void;
-  onShutdown: (msg: string) => void;
+  activeModule: ModuleId;
+  onSelectModule: (module: ModuleId) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-const GROUP_ORDER: string[] = ['COMMAND', 'INTELLIGENCE', 'OPERATIONS', 'FINANCE & RISK', 'AI', 'DATA & PLATFORM', 'SYSTEM'];
+interface NavSection {
+  title: string;
+  items: Array<{
+    id: ModuleId;
+    label: string;
+    icon: React.ElementType;
+    badge?: string;
+    aliases?: ModuleId[];
+  }>;
+}
 
-const GROUP_LABEL: Record<string, string> = {
-  COMMAND: 'COMMAND',
-  INTELLIGENCE: 'INTELLIGENCE',
-  OPERATIONS: 'OPERATIONS',
-  'FINANCE & RISK': 'FINANCE & RISK',
-  AI: 'AI',
-  'DATA & PLATFORM': 'DATA & PLATFORM',
-  SYSTEM: 'SYSTEM',
-};
+export const GlobalSidebar: React.FC<GlobalSidebarProps> = ({
+  activeModule,
+  onSelectModule,
+  isCollapsed,
+  onToggleCollapse,
+}) => {
+  const navSections: NavSection[] = [
+    {
+      title: 'OPERATIONS & GRID',
+      items: [
+        { id: 'command-center', label: 'Command Center', icon: LayoutDashboard, aliases: ['overview'] },
+        { id: 'grid-corridors', label: 'HV Grid Corridors', icon: Zap, badge: '14 Live' },
+        { id: 'drone-intelligence', label: 'Drone Intelligence AI', icon: Plane, badge: 'BVLOS' },
+        { id: 'logistics-command', label: 'Logistics Command', icon: Truck, badge: 'Convoys', aliases: ['logistics'] },
+      ],
+    },
+    {
+      title: 'SCM & DIGITAL TWIN',
+      items: [
+        { id: 'twin', label: 'SCM Digital Twin', icon: Layers },
+        { id: 'tender', label: 'Tender Intelligence', icon: FileText, aliases: ['procurement-twin'] },
+        { id: 'inventory', label: 'Strategic Spares Inventory', icon: Boxes },
+        { id: 'project', label: 'Project Supply Nexus', icon: FolderKanban },
+        { id: 'supplier', label: 'Supplier Network', icon: Building2 },
+        { id: 'sourcing', label: 'Strategic Sourcing', icon: TrendingUp },
+      ],
+    },
+    {
+      title: 'INTELLIGENCE & GRAPH',
+      items: [
+        { id: 'intelligence', label: 'Decision Intelligence', icon: Activity },
+        { id: 'procurement-graph', label: 'Knowledge Graph', icon: Network },
+        { id: 'acin', label: 'Contract Intelligence (ACIN)', icon: FileCheck2 },
+      ],
+    },
+    {
+      title: 'GOVERNANCE & FINANCE',
+      items: [
+        { id: 'executive', label: 'Executive Board', icon: Award },
+        { id: 'finance-intelligence', label: 'Finance Intelligence', icon: Coins, aliases: ['finance'] },
+        { id: 'risk-compliance', label: 'Risk & PPADA Compliance', icon: ShieldAlert, aliases: ['risk'] },
+        { id: 'decision', label: 'Decision & Audit Ledger', icon: CheckSquare },
+      ],
+    },
+    {
+      title: 'AI RUNTIME & OS',
+      items: [
+        { id: 'agents', label: 'Autonomous Agent Platform', icon: Bot },
+        { id: 'ai-operations', label: 'AI Operations Center', icon: Cpu, aliases: ['ai-ops'] },
+        { id: 'ai-runtime', label: 'AI Runtime Platform', icon: Server },
+        { id: 'admin', label: 'Administration OS', icon: Users },
+      ],
+    },
+  ];
 
-// Assign every existing module to a group (ALL routes preserved, only regrouped).
-const ITEM_GROUP: Record<string, string> = {
-  overview: 'COMMAND',
-  'drone-intelligence': 'INTELLIGENCE',
-  logistics: 'INTELLIGENCE',
-  procurement_graph: 'INTELLIGENCE',
-  intelligence: 'INTELLIGENCE',
-  twin: 'INTELLIGENCE',
-  tender: 'OPERATIONS',
-  project: 'OPERATIONS',
-  inventory: 'OPERATIONS',
-  supplier: 'OPERATIONS',
-  sourcing: 'OPERATIONS',
-  acin: 'OPERATIONS',
-  executive: 'OPERATIONS',
-  risk: 'FINANCE & RISK',
-  decision: 'FINANCE & RISK',
-  agents: 'AI',
-  'ai-ops': 'AI',
-  'ai-runtime': 'AI',
-  admin: 'SYSTEM',
-};
-
-export default function GlobalSidebar({ items, activeModule, onNavigate, onShutdown }: GlobalSidebarProps) {
-  const { collapsed, setCollapsed, mobileOpen, setMobileOpen, breakpoint } = useShell();
-
-  const grouped = GROUP_ORDER
-    .map(group => ({
-      group,
-      entries: items.filter(item => (ITEM_GROUP[item.id] || 'OPERATIONS') === group),
-    }))
-    .filter(g => g.entries.length > 0);
-
-  const navigate = (id: string) => {
-    onNavigate(id);
-    if (breakpoint !== 'desktop') setMobileOpen(false);
-  };
-
-  const sidebarInner = (isCollapsed: boolean, isMobile: boolean) => (
-    <div className="flex flex-col justify-between h-full">
-      <div className="space-y-4 min-h-0 overflow-y-auto pr-0.5">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} ${isMobile ? 'justify-between' : ''}`}>
-          {!isMobile && !isCollapsed && (
-            <span className="atlas-shell-focus flex items-center gap-1 text-[9px] font-mono text-slate-500 uppercase tracking-widest font-bold px-1">
-              <Layers className="w-3 h-3" /> Navigation
-            </span>
-          )}
-          {!isMobile && (
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="atlas-shell-focus p-1.5 hover:bg-slate-800 rounded text-slate-500 hover:text-white transition-colors cursor-pointer"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand' : 'Collapse'}
-            >
-              <ChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-            </button>
-          )}
-          {isMobile && (
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="atlas-shell-focus p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white cursor-pointer ml-auto"
-              aria-label="Close navigation drawer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {grouped.map((g, gi) => (
-          <div key={g.group} className="space-y-0.5">
+  return (
+    <aside
+      className={`atlas-shell-sidebar shrink-0 flex flex-col justify-between transition-all duration-300 z-30 ${
+        isCollapsed ? 'w-16' : 'w-64'
+      }`}
+    >
+      {/* Top Nav Rail */}
+      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1">
             {!isCollapsed && (
-              <span className="text-[9px] font-mono text-cyan-400/80 font-bold uppercase tracking-widest block pl-2 mb-1">
-                {GROUP_LABEL[g.group]}
-              </span>
+              <div className="px-3 pb-1 text-[10px] font-mono font-semibold tracking-wider text-slate-500 uppercase">
+                {section.title}
+              </div>
             )}
             <div className="space-y-0.5">
-              {g.entries.map(item => {
+              {section.items.map(item => {
                 const Icon = item.icon;
-                const isActive = activeModule === item.id;
+                const isActive = activeModule === item.id || (item.aliases && item.aliases.includes(activeModule));
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.id)}
-                    className={`atlas-shell-focus w-full text-left p-2 rounded-lg border flex items-center gap-2.5 transition-all cursor-pointer group/item ${
+                    type="button"
+                    onClick={() => onSelectModule(item.id)}
+                    title={isCollapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all group ${
                       isActive
-                        ? 'atlas-shell-nav-active text-[#00D9FF]'
-                        : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-900/40'
+                        ? 'atlas-shell-nav-active font-semibold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                     }`}
-                    aria-current={isActive ? 'page' : undefined}
-                    title={item.label}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-cyan-300' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
                     {!isCollapsed && (
-                      <span className="text-xs font-medium truncate select-none">{item.label}</span>
+                      <div className="flex-1 flex items-center justify-between text-left truncate">
+                        <span className="truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className="ml-1.5 text-[9px] px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/20 font-mono shrink-0">
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </button>
                 );
@@ -127,64 +150,31 @@ export default function GlobalSidebar({ items, activeModule, onNavigate, onShutd
         ))}
       </div>
 
-      <div className="pt-3 border-t border-slate-900/80 mt-3 shrink-0">
+      {/* Bottom Terminal Controls */}
+      <div className="p-2 border-t border-slate-800/80 space-y-1 bg-slate-950/40">
         <button
-          onClick={() => onShutdown('Active SCM terminal connection paused. All automated routing processes remain active in background mode.')}
-          className="atlas-shell-focus w-full p-2 rounded-lg text-pink-400/80 hover:text-pink-300 hover:bg-pink-950/20 border border-pink-500/10 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          title="Shut Down Terminal"
+          type="button"
+          onClick={onToggleCollapse}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors font-mono"
         >
-          <Power className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span className="text-[10px] font-mono uppercase tracking-wider select-none">Shut Down Terminal</span>}
+          {isCollapsed ? (
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          ) : (
+            <>
+              <ChevronLeft className="w-4 h-4 text-slate-400" />
+              <span>Collapse Sidebar</span>
+            </>
+          )}
         </button>
-      </div>
-    </div>
-  );
 
-  const isMobileView = breakpoint === 'mobile';
-  const isCollapsedView = breakpoint === 'desktop' ? collapsed : false;
-
-  return (
-    <>
-      {/* Mobile overlay drawer */}
-      <AnimatePresence>
-        {isMobileView && mobileOpen && (
-          <>
-            <motion.div
-              key="scrim"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={motionTokens.transition.fast}
-              onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm"
-              aria-hidden="true"
-            />
-            <motion.aside
-              key="drawer"
-              initial={{ x: -260 }}
-              animate={{ x: 0 }}
-              exit={{ x: -260 }}
-              transition={motionTokens.transition.normal}
-              className="atlas-shell-sidebar fixed top-0 left-0 bottom-0 z-50 w-60 p-3"
-              role="navigation"
-              aria-label="Primary"
-            >
-              {sidebarInner(false, true)}
-            </motion.aside>
-          </>
+        {!isCollapsed && (
+          <div className="px-3 py-2 rounded bg-slate-900/60 border border-slate-800/60 text-[10px] font-mono text-slate-500 flex items-center justify-between">
+            <span>TERMINAL ID: ATLAS-01</span>
+            <span className="text-emerald-400 font-semibold">ONLINE</span>
+          </div>
         )}
-      </AnimatePresence>
-
-      {/* Desktop / tablet rail */}
-      {breakpoint !== 'mobile' && (
-        <nav
-          className={`atlas-shell-sidebar shrink-0 hidden md:flex flex-col p-3 transition-[width] duration-200 ${isCollapsedView ? 'w-[60px]' : 'w-[240px]'}`}
-          role="navigation"
-          aria-label="Primary"
-        >
-          {sidebarInner(isCollapsedView, false)}
-        </nav>
-      )}
-    </>
+      </div>
+    </aside>
   );
-}
+};
+

@@ -1,287 +1,243 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  Compass, Search, Bell, User, Power, ShieldCheck, X,
-  PanelLeft, Command,
+import { 
+  Compass, 
+  Search, 
+  Command, 
+  Sparkles, 
+  Bell, 
+  CheckCircle2, 
+  ChevronDown, 
+  ShieldCheck, 
+  LogOut, 
+  Radio, 
+  Bot,
+  Activity
 } from 'lucide-react';
-import { useTenant } from '../../context/TenantContext';
-import { PermissionBadge } from '../ui/EnterpriseComponents';
-import { useShell } from './ShellContext';
-import { motionTokens } from '../../design-system/tokens';
+import { Tenant, UserProfile, TelemetryState } from '../../types';
 
 interface GlobalHeaderProps {
-  searchString: string;
-  onSearchChange: (val: string) => void;
+  currentTenant: Tenant;
+  onSelectTenant: (tenant: Tenant) => void;
+  availableTenants: Tenant[];
+  currentUser: UserProfile;
+  telemetry: TelemetryState | null;
   onOpenCommandPalette: () => void;
-  onSwitchTenant: (id: string) => void;
-  onLogout: () => void;
-  systemHealth: {
-    status?: string;
-    database?: string;
-    gemini_configured?: boolean;
-    version?: string;
-    uptime?: number;
-  };
-  notifications: { id: string; type: string; text: string }[];
-  setNotifications: React.Dispatch<React.SetStateAction<{ id: string; type: string; text: string }[]>>;
+  onToggleCopilot: () => void;
 }
 
-export default function GlobalHeader({
-  searchString,
-  onSearchChange,
+export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
+  currentTenant,
+  onSelectTenant,
+  availableTenants,
+  currentUser,
+  telemetry,
   onOpenCommandPalette,
-  onSwitchTenant,
-  onLogout,
-  systemHealth,
-  notifications,
-  setNotifications,
-}: GlobalHeaderProps) {
-  const { currentTenant, availableTenants, userProfile } = useTenant();
-  const { setMobileOpen, breakpoint } = useShell();
-
-  const [showTenantDropdown, setShowTenantDropdown] = useState(false);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  const closeAll = () => {
-    setShowTenantDropdown(false);
-    setShowUserDropdown(false);
-    setShowNotifications(false);
-  };
-
-  const systemNominal =
-    !systemHealth.status || systemHealth.status.toLowerCase() === 'online' || systemHealth.status === 'healthy';
-
-  const aiOnline = !!systemHealth.gemini_configured;
-
-  const openDrawer = () => {
-    closeAll();
-    setMobileOpen(true);
-  };
+  onToggleCopilot,
+}) => {
+  const [isTenantOpen, setIsTenantOpen] = useState(false);
+  const [isUserOpen, setIsUserOpen] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
 
   return (
-    <header
-      className="atlas-shell-header sticky top-0 z-40 flex items-center justify-between px-4 md:px-6 py-2.5 shrink-0 select-none"
-      role="banner"
-      aria-label="Global command rail"
-    >
-      {/* Left: mobile menu + brand + context */}
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={breakpoint === 'desktop' ? undefined : openDrawer}
-          className={`atlas-shell-focus md:hidden p-2 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer ${breakpoint === 'desktop' ? 'pointer-events-none opacity-0' : ''}`}
-          aria-label="Open navigation drawer"
-        >
-          <PanelLeft className="w-4 h-4" />
-        </button>
-
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 shrink-0 border border-cyan-500/25 rounded-[10px] flex items-center justify-center bg-[#121c2f]">
-            <Compass className="w-4.5 h-4.5 text-[#00E1FF]" />
+    <header className="sticky top-0 z-40 atlas-shell-header px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
+      {/* Left: Brand + Tenant Identity */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shadow-cyan-500/20">
+            <Compass className="w-4 h-4 animate-spin-slow" />
           </div>
-          <div className="leading-tight hidden sm:block min-w-0">
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-[10px] font-mono tracking-widest text-[#00D9FF] uppercase font-black">ATLAS</span>
-              <span className="text-[10px] font-display font-medium text-slate-400 whitespace-nowrap truncate">
-                / {currentTenant.name}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm tracking-wider uppercase text-slate-100 font-mono">
+                Salience Atlas
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono">
+                v5.1.0
               </span>
             </div>
-            <span className="text-[11px] font-display font-medium text-slate-500 block mt-0.5 truncate">
-              {currentTenant.fullName}
-            </span>
+            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
+              <span>National Grid Command</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-cyan-400 font-medium">{currentTenant.name}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Center: Command entry — ⌘K global search */}
-      <div className="flex-1 max-w-md mx-4 hidden md:block">
+      {/* Center: Command Palette Trigger */}
+      <div className="flex-1 max-w-xl hidden md:block">
         <button
+          type="button"
           onClick={onOpenCommandPalette}
-          className="atlas-shell-focus w-full flex items-center gap-2.5 bg-[#040812]/80 border border-slate-800/70 hover:border-cyan-500/30 rounded-lg px-3 py-2 text-left text-slate-500 hover:text-slate-300 transition-all cursor-pointer group"
-          aria-label="Open global search and command entry"
+          className="w-full h-9 px-3.5 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-between text-xs group"
         >
-          <Search className="w-3.5 h-3.5" />
-          <span className="text-[11px] font-mono flex-1 truncate">Search, navigate, investigate…</span>
-          <span className="flex items-center gap-1 text-[9.5px] font-mono text-slate-600 group-hover:text-cyan-400/80 transition-colors">
-            <Command className="w-3 h-3" /> K
-          </span>
+          <div className="flex items-center gap-2.5">
+            <Search className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+            <span>Search corridor, substation, tender, or dispatch drone…</span>
+          </div>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-400 border border-slate-700 font-mono">
+            <Command className="w-3 h-3" />
+            <span>K</span>
+          </div>
         </button>
       </div>
 
-      {/* Right: status + actions */}
-      <div className="flex items-center gap-2 md:gap-3">
-        {/* Agent Pulse — unified AI agent presence */}
+      {/* Right: Operational Status + Controls + Tenant + User */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        {/* System & AI Status Telemetry */}
+        <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-900/60 border border-slate-800/80 text-[11px] font-mono">
+          <div className="flex items-center gap-1.5 text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>SYSTEM NOMINAL</span>
+          </div>
+          <span className="text-slate-700">|</span>
+          <div className="flex items-center gap-1.5 text-cyan-400">
+            <Sparkles className="w-3 h-3" />
+            <span>ATLAS AI ONLINE</span>
+          </div>
+        </div>
+
+        {/* Copilot Assistant Launcher */}
         <button
-          onClick={onOpenCommandPalette}
-          className="atlas-shell-focus hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-800/70 hover:border-violet-500/25 transition-colors cursor-pointer"
-          title="ATLAS Agent Network — active autonomous intelligence"
-          aria-label="Agent network status"
+          type="button"
+          onClick={onToggleCopilot}
+          className="h-8 px-2.5 rounded-md bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 transition-colors flex items-center gap-1.5 text-xs font-mono"
+          title="Open AI Operations Copilot"
         >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-40" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-400" />
-          </span>
-          <span className="text-[9.5px] font-mono uppercase tracking-wider text-slate-400 font-semibold">AGENTS</span>
-          <span className="text-[9.5px] font-mono uppercase tracking-wider font-black text-violet-400">
-            {aiOnline ? '6 ACTIVE' : 'STANDBY'}
-          </span>
+          <Bot className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Copilot</span>
         </button>
 
-        {/* System status */}
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800/50" title="System health telemetry">
-          <span className={`w-1.5 h-1.5 rounded-full ${systemNominal ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-          <span className="text-[9.5px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
-            {systemNominal ? 'SYSTEM NOMINAL' : 'SYSTEM DEGRADED'}
-          </span>
-        </div>
-
-        {/* Tenant dropdown */}
+        {/* Notifications / Grid Alerts */}
         <div className="relative">
           <button
-            onClick={() => { setShowTenantDropdown(!showTenantDropdown); setShowUserDropdown(false); setShowNotifications(false); }}
-            className="atlas-shell-focus hidden md:flex items-center gap-2 bg-[#101827] border border-slate-800/70 hover:border-cyan-500/25 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-300 transition-all cursor-pointer"
+            type="button"
+            onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+            className="w-8 h-8 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 flex items-center justify-center relative transition-colors"
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${currentTenant.badgeColor.includes('emerald') ? 'bg-emerald-400' : currentTenant.badgeColor.includes('yellow') ? 'bg-yellow-400' : 'bg-cyan-400'}`} />
-            <span className="font-bold tracking-wide uppercase">{currentTenant.name}</span>
-            <span className="text-slate-500 text-[8px]">▼</span>
+            <Bell className="w-3.5 h-3.5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full ring-2 ring-slate-900" />
           </button>
-          <AnimatePresence>
-            {showTenantDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={motionTokens.transition.fast}
-                className="absolute right-0 mt-2 w-72 bg-[#0d1323] border border-slate-800 rounded-xl shadow-2xl z-50 p-2.5 space-y-1.5"
-              >
-                <div className="px-2 py-1 border-b border-slate-800 pb-1.5 flex justify-between">
-                  <span className="text-[9px] font-mono font-bold text-slate-500 tracking-wider">COMMAND ENVIRONMENTS</span>
-                  <span className="text-[8px] font-mono text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded border border-cyan-500/20">MULTI-TENANT</span>
-                </div>
-                {availableTenants.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => { onSwitchTenant(t.id); setShowTenantDropdown(false); }}
-                    className={`w-full text-left p-2 rounded-lg border transition-all flex items-center justify-between cursor-pointer ${currentTenant.id === t.id ? 'bg-[#101827] border-cyan-500/30 text-[#00D9FF] font-bold' : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-900/40'}`}
-                  >
-                    <span className="text-xs block">{t.logoText}</span>
-                    {currentTenant.id === t.id && (
-                      <span className="text-[8px] font-mono text-[#00D9FF] font-black bg-cyan-950/40 border border-cyan-500/20 px-1.5 py-0.5 rounded">ACTIVE</span>
-                    )}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowNotifications(!showNotifications); setShowUserDropdown(false); setShowTenantDropdown(false); }}
-            className="atlas-shell-focus p-2 bg-[#101827] border border-slate-800/70 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white relative transition-colors cursor-pointer"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            {notifications.length > 0 && <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-cyan-400" />}
-          </button>
-          <AnimatePresence>
-            {showNotifications && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={motionTokens.transition.fast}
-                className="absolute right-0 mt-2 w-72 bg-[#090f1d] border border-slate-800 p-3 rounded-xl shadow-2xl z-50 space-y-2"
-              >
-                <div className="flex items-center justify-between border-b border-cyan-500/10 pb-2">
-                  <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase">TELEMETRY STREAM</span>
-                  <button onClick={() => setShowNotifications(false)} className="text-slate-500 hover:text-white" aria-label="Close notifications">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+          {isAlertsOpen && (
+            <div className="absolute right-0 mt-2 w-80 rounded-lg bg-slate-900 border border-slate-800 shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider font-mono">
+                  Live Dispatch Alerts
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                  2 Pending
+                </span>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="p-2 rounded bg-slate-800/60 border border-slate-700/60">
+                  <div className="flex items-center justify-between font-mono text-[11px] text-amber-300">
+                    <span>SUSWA-ISINYA 400kV</span>
+                    <span>14m ago</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px] mt-0.5">
+                    Drone #12 detected insulator flashover risk at Tower 184. Auto-contingency ready.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  {notifications.map(n => (
-                    <div key={n.id} className="p-2.5 bg-slate-950/80 rounded-lg text-[10.5px] leading-relaxed text-slate-300 border border-slate-900">
-                      {n.text}
-                    </div>
-                  ))}
+                <div className="p-2 rounded bg-slate-800/60 border border-slate-700/60">
+                  <div className="flex items-center justify-between font-mono text-[11px] text-cyan-300">
+                    <span>MOMBASA PORT CLEARANCE</span>
+                    <span>42m ago</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px] mt-0.5">
+                    Conveyor transformer unit cleared customs. SCM convoy en route to Mariakani.
+                  </p>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* User */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowUserDropdown(!showUserDropdown); setShowTenantDropdown(false); setShowNotifications(false); }}
-            className="atlas-shell-focus flex items-center gap-2 px-2 py-1.5 bg-[#101827] border border-slate-800/70 hover:border-[#00D9FF]/25 rounded-lg transition-all cursor-pointer"
-            aria-label="User access matrix"
-          >
-            <div className="w-7 h-7 rounded-full border border-cyan-500/20 bg-slate-900/80 flex items-center justify-center">
-              <User className="w-3.5 h-3.5 text-[#00D9FF]" />
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Tenant Switcher */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsTenantOpen(!isTenantOpen)}
+            className="h-8 px-2.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-mono text-slate-200 flex items-center gap-1.5 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            <span className="truncate max-w-[80px] sm:max-w-none">{currentTenant.code}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
           </button>
-          <AnimatePresence>
-            {showUserDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={motionTokens.transition.fast}
-                className="absolute right-0 mt-2 w-80 bg-[#0d1323] border border-slate-800 rounded-xl shadow-2xl z-50 p-4 space-y-3.5"
-              >
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[#00D9FF]" />
-                    <span className="text-[10px] font-mono font-bold text-slate-200 tracking-wider">SECURE ACCESS MATRIX</span>
+
+          {isTenantOpen && (
+            <div className="absolute right-0 mt-2 w-52 rounded-lg bg-slate-900 border border-slate-800 shadow-xl py-1 z-50">
+              <div className="px-3 py-1.5 text-[10px] uppercase font-mono text-slate-400 border-b border-slate-800">
+                Switch Grid Tenant
+              </div>
+              {availableTenants.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    onSelectTenant(t);
+                    setIsTenantOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                    currentTenant.id === t.id
+                      ? 'bg-cyan-950/40 text-cyan-300 font-medium'
+                      : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <div>
+                    <div>{t.name}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{t.clearanceLevel}</div>
                   </div>
-                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-cyan-950/50 border border-cyan-500/25 text-[#00D9FF] leading-none">{userProfile.accessLevel}</span>
+                  {currentTenant.id === t.id && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* User Identity & Clearance */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsUserOpen(!isUserOpen)}
+            className="h-8 pl-2 pr-2.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-200 flex items-center gap-2 transition-colors"
+          >
+            <div className="w-5 h-5 rounded bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold font-mono">
+              {currentUser.name.slice(0, 1)}
+            </div>
+            <span className="hidden lg:inline text-xs font-medium text-slate-200">
+              {currentUser.name}
+            </span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {isUserOpen && (
+            <div className="absolute right-0 mt-2 w-64 rounded-lg bg-slate-900 border border-slate-800 shadow-xl p-3 z-50">
+              <div className="pb-2 mb-2 border-b border-slate-800">
+                <div className="font-medium text-slate-200 text-xs">{currentUser.name}</div>
+                <div className="text-[11px] text-slate-400">{currentUser.email}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-cyan-400">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>{currentUser.role} • {currentUser.clearance}</span>
                 </div>
-                <div className="space-y-1 text-[10.5px] font-mono p-2.5 bg-slate-950/40 rounded-lg border border-slate-800">
-                  <div className="flex justify-between items-center"><span className="text-slate-500">Identity:</span><span className="text-white font-bold">{userProfile.name}</span></div>
-                  <div className="flex justify-between items-center pt-1.5"><span className="text-slate-500">Role:</span><span className="text-cyan-400 font-semibold">{userProfile.role}</span></div>
-                  <div className="flex justify-between items-center pt-1.5"><span className="text-slate-500">Clearance:</span><span className="text-emerald-400 font-bold">{userProfile.clearance}</span></div>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="px-2 py-1.5 rounded text-slate-400 font-mono text-[10px] bg-slate-950/60">
+                  Zero Trust Identity: LEVEL 04 Clearance Verified
                 </div>
-                <div className="space-y-1.5">
-                  <span className="text-[8.5px] font-mono text-slate-500 uppercase tracking-widest block font-bold">VERIFIED PERMISSIONS</span>
-                  <div className="grid grid-cols-2 gap-1.5 font-sans">
-                    <PermissionBadge permission="Tender Intelligence" granted={currentTenant.permissions.tenderIntel} />
-                    <PermissionBadge permission="Compliance" granted={currentTenant.permissions.governance} />
-                    <PermissionBadge permission="Digital Twin" granted={currentTenant.permissions.digitalTwin} />
-                    <PermissionBadge permission="AI Copilot" granted={currentTenant.permissions.aiAgents} />
-                    <PermissionBadge permission="Analytics" granted={currentTenant.permissions.analytics} />
-                    <PermissionBadge permission="SLA Contracts" granted={currentTenant.permissions.contracts} />
-                  </div>
-                </div>
-                <div className="border-t border-slate-800 pt-2.5 space-y-2 text-[9px] font-mono">
-                  <div className="flex justify-between text-slate-500">
-                    <span>GOVERNANCE:</span>
-                    <span className="text-emerald-400 font-bold">● COMPLIANT</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setNotifications(prev => [{ id: Date.now().toString(), type: 'security', text: "Audit security packet successfully submitted. 256-bit handshake verified." }, ...prev]);
-                      setShowNotifications(true);
-                      setShowUserDropdown(false);
-                    }}
-                    className="w-full py-1.5 bg-[#00D9FF]/10 text-[#00D9FF] hover:bg-[#00D9FF]/20 text-[9px] font-black border border-cyan-500/25 rounded-lg text-center cursor-pointer transition-colors"
-                  >
-                    FORGE SECURE TELEMETRY HANDSHAKE
-                  </button>
-                  <button
-                    onClick={onLogout}
-                    className="w-full py-1.5 bg-rose-950/40 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 text-[9px] font-black border border-rose-500/20 rounded-lg text-center cursor-pointer transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Power className="w-3 h-3" /> TERMINATE SESSION & LOGOUT
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <button
+                  type="button"
+                  onClick={() => setIsUserOpen(false)}
+                  className="w-full text-left px-2 py-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                >
+                  <Activity className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Telemetry Audit Trail</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
-}
+};

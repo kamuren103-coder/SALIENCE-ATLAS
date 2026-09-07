@@ -1,54 +1,49 @@
 import React from 'react';
-import { useTenant } from '../../context/TenantContext';
+import { Database, ShieldCheck, Sparkles, Activity, Server } from 'lucide-react';
+import { Tenant, TelemetryState } from '../../types';
 
 interface TransparentFooterProps {
-  systemHealth: {
-    status?: string;
-    database?: string;
-    gemini_configured?: boolean;
-    version?: string;
-    uptime?: number;
-  };
+  currentTenant: Tenant;
+  telemetry: TelemetryState | null;
 }
 
-export default function TransparentFooter({ systemHealth }: TransparentFooterProps) {
-  const { currentTenant } = useTenant();
-
-  const systemNominal =
-    !systemHealth.status || systemHealth.status.toLowerCase() === 'online' || systemHealth.status === 'healthy';
-  const aiOnline = !!systemHealth.gemini_configured;
-  const environment = systemHealth.status === 'offline' ? 'LOCAL' : 'LIVE';
-  const version = '5.1.0';
-
+export const TransparentFooter: React.FC<TransparentFooterProps> = ({
+  currentTenant,
+  telemetry,
+}) => {
   return (
     <footer
-      className="atlas-shell-footer shrink-0 select-none"
       role="contentinfo"
+      className="atlas-shell-footer h-10 px-4 lg:px-6 shrink-0 flex items-center justify-between text-[11px] font-mono text-slate-400 z-20"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-5 md:px-6 py-2 text-[9px] font-mono uppercase tracking-wider text-slate-500">
-        <div className="flex items-center gap-4 min-w-0">
-          <span className="text-slate-400 font-bold whitespace-nowrap">ATLAS v{version}</span>
-          <span className="hidden sm:inline whitespace-nowrap">● {environment}</span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 text-slate-300">
+          <span className="text-slate-500">PLATFORM:</span>
+          <span>SALIENCE ATLAS v5.1.0</span>
         </div>
-
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="flex items-center gap-1.5 whitespace-nowrap">
-            <span className={`w-1 h-1 rounded-full ${systemNominal ? 'bg-emerald-400' : 'bg-amber-400'}`} /> SYSTEM{' '}
-            {systemNominal ? 'NOMINAL' : 'DEGRADED'}
-          </span>
-          <span className="flex items-center gap-1.5 whitespace-nowrap">
-            <span className={`w-1 h-1 rounded-full ${aiOnline ? 'bg-emerald-400' : 'bg-slate-500'}`} /> AI{' '}
-            {aiOnline ? 'ONLINE' : 'STANDBY'}
-          </span>
-          {systemHealth.database && (
-            <span className="hidden md:inline whitespace-nowrap">DB {systemHealth.database}</span>
-          )}
+        <div className="hidden sm:flex items-center gap-1.5 text-emerald-400">
+          <Activity className="w-3 h-3 text-emerald-400" />
+          <span>STATUS: {telemetry?.status || 'HEALTHY'}</span>
         </div>
+        <div className="hidden md:flex items-center gap-1.5 text-slate-400">
+          <Database className="w-3 h-3 text-cyan-400" />
+          <span>SQLITE CORE: CONNECTED</span>
+        </div>
+      </div>
 
-        <div className="hidden lg:flex items-center gap-3 whitespace-nowrap">
-          <span>{currentTenant.name} TENANT</span>
+      <div className="flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-1.5 text-slate-400">
+          <Server className="w-3 h-3 text-slate-500" />
+          <span>PORT: 3000 (0.0.0.0)</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-cyan-400">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>CLEARANCE: {currentTenant.clearanceLevel}</span>
+        </div>
+        <div className="text-slate-500 hidden sm:inline">
+          TENANT: <span className="text-slate-300 uppercase">{currentTenant.name}</span>
         </div>
       </div>
     </footer>
   );
-}
+};
